@@ -40,13 +40,13 @@ return new class extends Migration
             ]);
 
             // Snapshot of ordered products
-            $table->json('ordered_products')->default('[]');
+            $table->json('ordered_products');
 
             // Snapshot of customer details
-            $table->json('customer_details')->default('[]');
+            $table->json('customer_details');
 
             // Address snapshot
-            $table->json('address')->default('[]');
+            $table->json('address');
 
             $table->decimal('delivery_charge', 8, 2)->default(0);
             $table->decimal('total_price', 15, 2)->default(0);
