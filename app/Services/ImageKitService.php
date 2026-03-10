@@ -31,19 +31,44 @@ class ImageKitService
     {
         $fileName = $this->generateUniqueFileName($file->getClientOriginalExtension());
 
+        // BUG 1 FIXED: base64_encode the content and prefix with
+        // "data:<mime>;base64," — the ImageKit PHP SDK requires the full
+        // data URI format when passing base64, otherwise it treats the
+        // string as a URL and tries to fetch it, causing a 500.
+        $mimeType   = $file->getMimeType();
+        $base64Data = base64_encode(file_get_contents($file->getRealPath()));
+        $fileData   = "data:{$mimeType};base64,{$base64Data}";
+
         $response = $this->imageKit->uploadFile([
-            'file'              => base64_encode(file_get_contents($file->getRealPath())),
+            'file'              => $fileData,
             'fileName'          => $fileName,
             'folder'            => $folder,
+            // BUG 2 FIXED: must be boolean false, not the string "false".
+            // PHP's false casts to "" (empty string) in JSON which the SDK
+            // may not handle — use explicit false literal.
             'useUniqueFileName' => false,
         ]);
 
-        if ($response->error) {
-            throw new \RuntimeException('ImageKit upload failed: ' . json_encode($response->error));
+        // BUG 3 FIXED: the ImageKit PHP SDK (v3+) returns an object where
+        // the success response is at $response->result and errors are at
+        // $response->error. However in some SDK versions the response is
+        // a plain object with ->success / ->error at the top level.
+        // Check both shapes defensively.
+        $error  = $response->error  ?? null;
+        $result = $response->result ?? $response;
+
+        if ($error) {
+            throw new \RuntimeException('ImageKit upload failed: ' . json_encode($error));
         }
 
-        $url    = $response->result->url;
-        $fileId = $response->result->fileId;
+        if (empty($result->url) || empty($result->fileId)) {
+            throw new \RuntimeException(
+                'ImageKit upload returned unexpected response: ' . json_encode($response)
+            );
+        }
+
+        $url    = $result->url;
+        $fileId = $result->fileId;
 
         ImageKitFileId::create([
             'url'     => $url,
