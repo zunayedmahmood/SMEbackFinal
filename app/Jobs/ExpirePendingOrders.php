@@ -20,6 +20,7 @@ class ExpirePendingOrders implements ShouldQueue
     public function __construct()
     {
         // Can optionally pass order IDs if needed
+        //But, we'll not use it in this implementation since we're querying for pending orders directly in the handle method
     }
 
     public function handle()
