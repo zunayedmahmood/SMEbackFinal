@@ -56,7 +56,7 @@ class StripePaymentService
                 'mode' => 'payment',
                 'line_items' => $lineItems,
                 'success_url' => 'https://sarengmedequip-alpha.vercel.app/order/' . $order->order_id,
-                'cancel_url' => 'https://sarengmedequip-alpha.vercel.app/order/' . $order->order_id,
+                'cancel_url' => 'https://localhost:3000/order/' . $order->order_id,
                 'metadata' => [
                     'order_id' => $order->id,
                 ],
