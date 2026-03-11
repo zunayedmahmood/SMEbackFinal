@@ -32,27 +32,14 @@ class CategoryController extends Controller
      */
     public function createNewCategory(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
+        $validated = $request->validate([
             'name' => 'required|string|max:255|unique:categories,name',
         ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors'  => $validator->errors()
-            ], 422);
-        }
-
-        $validated = $validator->validated();
 
         $category = Category::createCategory($validated['name']);
 
         if (!$category) {
-            return response()->json([
-                'success' => false,
-                'message' => 'The category name is reserved.'
-            ], 403);
+            throw new \Symfony\Component\HttpKernel\Exception\HttpException(403, 'The category name is reserved.');
         }
 
         return response()->json([
@@ -70,14 +57,7 @@ class CategoryController extends Controller
      */
     public function getCategoryById(int $id): JsonResponse
     {
-        $category = Category::getCategoryById($id);
-
-        if (!$category) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Category not found.'
-            ], 404);
-        }
+        $category = Category::findOrFail($id);
 
         return response()->json([
             'success' => true,
@@ -94,34 +74,14 @@ class CategoryController extends Controller
      */
     public function updateCategoryName(Request $request, int $id): JsonResponse
     {
-        $category = Category::find($id);
+        $category = Category::findOrFail($id);
 
-        if (!$category) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Category not found.'
-            ], 404);
-        }
-
-        $validator = Validator::make($request->all(), [
+        $validated = $request->validate([
             'name' => 'required|string|max:255|unique:categories,name,' . $id,
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors'  => $validator->errors()
-            ], 422);
-        }
-
-        $validated = $validator->validated();
-
         if (!$category->updateCategoryName($validated['name'])) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cannot update this category or the name is reserved.'
-            ], 403);
+            throw new \Symfony\Component\HttpKernel\Exception\HttpException(403, 'Cannot update this category or the name is reserved.');
         }
 
         return response()->json([
@@ -139,13 +99,10 @@ class CategoryController extends Controller
      */
     public function deleteCategory(int $id): JsonResponse
     {
-        $success = Category::deleteCategory($id);
-
-        if (!$success) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Category not found or could not be deleted.'
-            ], 404);
+        $category = Category::findOrFail($id);
+        
+        if (!$category->delete()) {
+             throw new \RuntimeException('Category could not be deleted.');
         }
 
         return response()->json([

@@ -36,7 +36,8 @@ class ContactMessageController extends Controller
 
     public function deleteMessage(int $id): JsonResponse
     {
-        $contactMessage = ContactMessage::deleteMessage($id);
+        $contactMessage = ContactMessage::findOrFail($id);
+        $contactMessage->delete();
 
         return response()->json([
             'message' => 'Message deleted successfully',

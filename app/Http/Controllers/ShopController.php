@@ -61,44 +61,32 @@ class ShopController extends Controller
             $formattedProducts[$product['product_id']] = $product['quantity'];
         }
 
-        try {
-            return DB::transaction(function () use ($validated, $formattedProducts) {
-                // Step 1: Create the Order
-                $order = CreateOrderAction::run(
-                    $validated['orderData']['customer_details'],
-                    $validated['orderData']['payment_method'],
-                    $formattedProducts,
-                    $validated['orderData']['address']
-                );
+        return DB::transaction(function () use ($validated, $formattedProducts) {
+            // Step 1: Create the Order
+            $order = CreateOrderAction::run(
+                $validated['orderData']['customer_details'],
+                $validated['orderData']['payment_method'],
+                $formattedProducts,
+                $validated['orderData']['address']
+            );
 
-                // Step 2: Reserve Inventory
-                ReserveInventoryAction::run($order);
+            // Step 2: Reserve Inventory
+            ReserveInventoryAction::run($order);
 
-                $response = [
-                    'success' => true,
-                    'order' => $order->load('stripeIdRecord'),
-                ];
+            $response = [
+                'success' => true,
+                'order' => $order->load('stripeIdRecord'),
+            ];
 
-                // Step 3: Handle Payment Method
-                if ($order->payment_method === 'Online') {
-                    $stripeService = app(StripePaymentService::class);
-                    $session = $stripeService->createCheckoutSession($order);
-                    $response['checkout_url'] = $session->url;
-                }
+            // Step 3: Handle Payment Method
+            if ($order->payment_method === 'Online') {
+                $stripeService = app(StripePaymentService::class);
+                $session = $stripeService->createCheckoutSession($order);
+                $response['checkout_url'] = $session->url;
+            }
 
-                return response()->json($response);
-            });
-        } catch (Exception $e) {
-            Log::error('Order creation failed', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 400);
-        }
+            return response()->json($response);
+        });
     }
 
 

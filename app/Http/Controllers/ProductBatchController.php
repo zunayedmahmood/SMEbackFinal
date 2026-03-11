@@ -18,22 +18,13 @@ class ProductBatchController extends Controller
      */
     public function addInventory(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
+        $validated = $request->validate([
             'product_id' => 'required|integer|exists:products,id',
             'cost_price' => 'required|numeric|min:0',
             'quantity'   => 'required|integer|min:1',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors'  => $validator->errors()
-            ], 422);
-        }
-
-        $validated = $validator->validated();
-        $product   = Product::find($validated['product_id']);
+        $product = Product::findOrFail($validated['product_id']);
 
         ProductBatch::addInventory($product, (float)$validated['cost_price'], (int)$validated['quantity']);
 
@@ -52,22 +43,13 @@ class ProductBatchController extends Controller
      */
     public function removeInventory(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
+        $validated = $request->validate([
             'product_id'       => 'required|integer|exists:products,id',
             'product_batch_id' => 'required|integer|exists:product_batches,id',
             'quantity'         => 'required|integer|min:1',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors'  => $validator->errors()
-            ], 422);
-        }
-
-        $validated = $validator->validated();
-        $product   = Product::find($validated['product_id']);
+        $product = Product::findOrFail($validated['product_id']);
 
         ProductBatch::removeInventory($product, (int)$validated['product_batch_id'], (int)$validated['quantity']);
 
@@ -86,21 +68,12 @@ class ProductBatchController extends Controller
      */
     public function deleteProductBatch(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
+        $validated = $request->validate([
             'product_id'       => 'required|integer|exists:products,id',
             'product_batch_id' => 'required|integer|exists:product_batches,id',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors'  => $validator->errors()
-            ], 422);
-        }
-
-        $validated = $validator->validated();
-        $product   = Product::find($validated['product_id']);
+        $product = Product::findOrFail($validated['product_id']);
 
         ProductBatch::deleteProductBatch($product, (int)$validated['product_batch_id']);
         $product->updateTotalCount();

@@ -55,7 +55,14 @@ class StripeWebhookController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            return response('Error handling webhook', Response::HTTP_INTERNAL_SERVER_ERROR);
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'type' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
         return response('Webhook handled', Response::HTTP_OK);

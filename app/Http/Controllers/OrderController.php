@@ -17,14 +17,7 @@ class OrderController extends Controller
      */
     public function getOrderById(string $order_id): JsonResponse
     {
-        $order = Order::findByOrderId($order_id);
-
-        if (!$order) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Order not found.'
-            ], 404);
-        }
+        $order = Order::where('order_id', $order_id)->firstOrFail();
 
         return response()->json([
             'success' => true,
@@ -37,20 +30,10 @@ class OrderController extends Controller
      */
     public function confirmOrderPayment(string $order_id): JsonResponse
     {
-        $order = Order::where('order_id', $order_id)->first();
-
-        if (!$order) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Order not found.'
-            ], 404);
-        }
+        $order = Order::where('order_id', $order_id)->firstOrFail();
 
         if (!$order->confirm()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Order already confirmed or cannot be confirmed.'
-            ], 422);
+            throw new \RuntimeException('Order already confirmed or cannot be confirmed.');
         }
 
         return response()->json([
@@ -69,36 +52,19 @@ class OrderController extends Controller
             'order_id' => 'required|string',
         ]);
 
-        $order = Order::where('order_id', $request->order_id)->first();
-
-        if (!$order) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Order not found.'
-            ], 404);
-        }
+        $order = Order::where('order_id', $request->order_id)->firstOrFail();
 
         if ($order->order_status !== 'Pending' || $order->payment_status === 'Paid') {
-            return response()->json([
-                'success' => false,
-                'message' => 'This order is not eligible for manual payment.'
-            ], 422);
+            throw new \RuntimeException('This order is not eligible for manual payment.');
         }
 
-        try {
-            $session = $stripePaymentService->createCheckoutSession($order);
+        $session = $stripePaymentService->createCheckoutSession($order);
 
-            return response()->json([
-                'success' => true,
-                'checkout_url' => $session->url,
-                'order' => $order
-            ]);
-        } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 422);
-        }
+        return response()->json([
+            'success' => true,
+            'checkout_url' => $session->url,
+            'order' => $order
+        ]);
     }
 
     /**
@@ -117,14 +83,7 @@ class OrderController extends Controller
             'total_price'                    => 'nullable|numeric|min:0',
         ]);
 
-        $order = Order::where('order_id', $order_id)->first();
-
-        if (!$order) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Order not found.'
-            ], 404);
-        }
+        $order = Order::where('order_id', $order_id)->firstOrFail();
 
         $order->update($validated);
 
@@ -140,14 +99,7 @@ class OrderController extends Controller
      */
     public function deleteOrder(string $order_id): JsonResponse
     {
-        $order = Order::where('order_id', $order_id)->first();
-
-        if (!$order) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Order not found.'
-            ], 404);
-        }
+        $order = Order::where('order_id', $order_id)->firstOrFail();
 
         $order->delete();
 

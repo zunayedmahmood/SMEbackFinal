@@ -11,30 +11,15 @@ class CategoryImageController extends Controller
 {
     public function saveImage(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
+        $validated = $request->validate([
             'category_id' => 'required|integer|exists:categories,id|unique:category_images,category_id',
             'image_url'   => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors'  => $validator->errors()
-            ], 422);
-        }
-
-        try {
-            $categoryImage = CategoryImage::saveImage(
-                $request->category_id,
-                $request->file('image_url')
-            );
-        } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to upload image: ' . $e->getMessage(),
-            ], 500);
-        }
+        $categoryImage = CategoryImage::saveImage(
+            $validated['category_id'],
+            $request->file('image_url')
+        );
 
         return response()->json([
             'success'   => true,
@@ -48,10 +33,7 @@ class CategoryImageController extends Controller
         $imageUrl = CategoryImage::getImage($categoryId);
 
         if (!$imageUrl) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Image not found.'
-            ], 404);
+            throw new \Symfony\Component\HttpKernel\Exception\NotFoundHttpException('Image not found.');
         }
 
         return response()->json([
@@ -62,29 +44,14 @@ class CategoryImageController extends Controller
 
     public function updateImage(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
+        $validated = $request->validate([
             'category_id' => 'required|integer|exists:category_images,category_id',
             'image_url'   => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors'  => $validator->errors()
-            ], 422);
-        }
+        $categoryImage = CategoryImage::where('category_id', $validated['category_id'])->firstOrFail();
 
-        $categoryImage = CategoryImage::where('category_id', $request->category_id)->first();
-
-        try {
-            $categoryImage->updateImage($request->file('image_url'));
-        } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update image: ' . $e->getMessage(),
-            ], 500);
-        }
+        $categoryImage->updateImage($request->file('image_url'));
 
         return response()->json([
             'success'   => true,
@@ -95,23 +62,9 @@ class CategoryImageController extends Controller
 
     public function deleteImage(int $categoryId): JsonResponse
     {
-        $categoryImage = CategoryImage::where('category_id', $categoryId)->first();
+        $categoryImage = CategoryImage::where('category_id', $categoryId)->firstOrFail();
 
-        if (!$categoryImage) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Image not found.'
-            ], 404);
-        }
-
-        try {
-            $categoryImage->deleteImage();
-        } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to delete image: ' . $e->getMessage(),
-            ], 500);
-        }
+        $categoryImage->deleteImage();
 
         return response()->json([
             'success' => true,

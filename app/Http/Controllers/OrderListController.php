@@ -36,25 +36,18 @@ class OrderListController extends Controller
             $formattedProducts[$product['id']] = $product['qty'];
         }
 
-        try {
-            $order = CreateOrderAction::run(
-                $validated['customer_details'],
-                $validated['payment_method'],
-                $formattedProducts,
-                $validated['address']
-            );
+        $order = CreateOrderAction::run(
+            $validated['customer_details'],
+            $validated['payment_method'],
+            $formattedProducts,
+            $validated['address']
+        );
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Order created successfully.',
-                'data'    => $order->load('stripeIdRecord')
-            ], 201);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 400);
-        }
+        return response()->json([
+            'success' => true,
+            'message' => 'Order created successfully.',
+            'data'    => $order->load('stripeIdRecord')
+        ], 201);
     }
 
     /**

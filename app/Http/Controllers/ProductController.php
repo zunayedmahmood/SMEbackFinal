@@ -52,14 +52,7 @@ class ProductController extends Controller
      */
     public function getProductById(int $id): JsonResponse
     {
-        $product = Product::getProductById($id);
-
-        if (!$product) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Product not found.'
-            ], 404);
-        }
+        $product = Product::with(['productBatches', 'categories'])->findOrFail($id);
 
         return response()->json([
             'success' => true,
@@ -75,7 +68,7 @@ class ProductController extends Controller
      */
     public function createProduct(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
+        $validated = $request->validate([
             'name'          => 'required|string|max:255',
             'selling_price' => 'required|numeric|min:0',
             'image_src'     => 'nullable|array',
@@ -84,14 +77,6 @@ class ProductController extends Controller
             'categories_id'   => 'nullable|array',
             'categories_id.*' => 'integer|exists:categories,id',
         ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors'  => $validator->errors()
-            ], 422);
-        }
 
         $product = Product::createProduct(
             $request->name,
@@ -117,28 +102,13 @@ class ProductController extends Controller
      */
     public function updateProductName(Request $request, int $id): JsonResponse
     {
-        $product = Product::find($id);
+        $product = Product::findOrFail($id);
 
-        if (!$product) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Product not found.'
-            ], 404);
-        }
-
-        $validator = Validator::make($request->all(), [
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors'  => $validator->errors()
-            ], 422);
-        }
-
-        $product->updateProductName($request->name);
+        $product->updateProductName($validated['name']);
 
         return response()->json([
             'success' => true,
@@ -156,28 +126,13 @@ class ProductController extends Controller
      */
     public function updateProductDescription(Request $request, int $id): JsonResponse
     {
-        $product = Product::find($id);
+        $product = Product::findOrFail($id);
 
-        if (!$product) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Product not found.'
-            ], 404);
-        }
-
-        $validator = Validator::make($request->all(), [
+        $validated = $request->validate([
             'description' => 'nullable|string',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors'  => $validator->errors()
-            ], 422);
-        }
-
-        $product->updateDescription($request->description);
+        $product->updateDescription($validated['description']);
 
         return response()->json([
             'success' => true,
@@ -195,28 +150,13 @@ class ProductController extends Controller
      */
     public function updateSellingPrice(Request $request, int $id): JsonResponse
     {
-        $product = Product::find($id);
+        $product = Product::findOrFail($id);
 
-        if (!$product) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Product not found.'
-            ], 404);
-        }
-
-        $validator = Validator::make($request->all(), [
+        $validated = $request->validate([
             'selling_price' => 'required|numeric|min:0',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors'  => $validator->errors()
-            ], 422);
-        }
-
-        $product->updateSellingPrice((float)$request->selling_price);
+        $product->updateSellingPrice((float)$validated['selling_price']);
 
         return response()->json([
             'success' => true,
@@ -234,29 +174,14 @@ class ProductController extends Controller
      */
     public function addCategory(Request $request, int $id): JsonResponse
     {
-        $product = Product::find($id);
+        $product = Product::findOrFail($id);
 
-        if (!$product) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Product not found.'
-            ], 404);
-        }
-
-        $validator = Validator::make($request->all(), [
+        $validated = $request->validate([
             'category_ids'   => 'required|array',
             'category_ids.*' => 'integer|exists:categories,id',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors'  => $validator->errors()
-            ], 422);
-        }
-
-        $product->addCategory($request->category_ids);
+        $product->addCategory($validated['category_ids']);
 
         return response()->json([
             'success' => true,
@@ -274,29 +199,14 @@ class ProductController extends Controller
      */
     public function removeCategory(Request $request, int $id): JsonResponse
     {
-        $product = Product::find($id);
+        $product = Product::findOrFail($id);
 
-        if (!$product) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Product not found.'
-            ], 404);
-        }
-
-        $validator = Validator::make($request->all(), [
+        $validated = $request->validate([
             'category_ids'   => 'required|array',
             'category_ids.*' => 'integer|exists:categories,id',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors'  => $validator->errors()
-            ], 422);
-        }
-
-        $product->removeCategory($request->category_ids);
+        $product->removeCategory($validated['category_ids']);
 
         return response()->json([
             'success' => true,
@@ -313,12 +223,15 @@ class ProductController extends Controller
      */
     public function deleteProductById(int $id): JsonResponse
     {
-        if (!Product::deleteProductById($id)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Product not found.'
-            ], 404);
+        $product = Product::findOrFail($id);
+        
+        // Clean up stored images
+        $imageKit = new \App\Services\ImageKitService();
+        foreach ($product->image_src ?? [] as $url) {
+            $imageKit->delete($url);
         }
+
+        $product->delete();
 
         return response()->json([
             'success' => true,
@@ -335,27 +248,12 @@ class ProductController extends Controller
      */
     public function addNewImage(Request $request, int $id): JsonResponse
     {
-        $product = Product::find($id);
+        $product = Product::findOrFail($id);
 
-        if (!$product) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Product not found.'
-            ], 404);
-        }
-
-        $validator = Validator::make($request->all(), [
+        $validated = $request->validate([
             'images'   => 'required|array',
             'images.*' => 'image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors'  => $validator->errors()
-            ], 422);
-        }
 
         $product->addNewImage($request->file('images'));
 
@@ -375,29 +273,14 @@ class ProductController extends Controller
      */
     public function deleteImage(Request $request, int $id): JsonResponse
     {
-        $product = Product::find($id);
+        $product = Product::findOrFail($id);
 
-        if (!$product) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Product not found.'
-            ], 404);
-        }
-
-        $validator = Validator::make($request->all(), [
+        $validated = $request->validate([
             'paths'   => 'required|array',
             'paths.*' => 'string',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors'  => $validator->errors()
-            ], 422);
-        }
-
-        $product->deleteImage($request->paths);
+        $product->deleteImage($validated['paths']);
 
         return response()->json([
             'success' => true,
@@ -414,14 +297,7 @@ class ProductController extends Controller
      */
     public function updateTotalCount(int $id): JsonResponse
     {
-        $product = Product::find($id);
-
-        if (!$product) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Product not found.'
-            ], 404);
-        }
+        $product = Product::findOrFail($id);
 
         $product->updateTotalCount();
 
@@ -440,14 +316,7 @@ class ProductController extends Controller
      */
     public function getTotalCount(int $id): JsonResponse
     {
-        $product = Product::find($id);
-
-        if (!$product) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Product not found.'
-            ], 404);
-        }
+        $product = Product::findOrFail($id);
 
         return response()->json([
             'success'     => true,
