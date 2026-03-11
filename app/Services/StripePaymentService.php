@@ -55,8 +55,8 @@ class StripePaymentService
                 'payment_method_types' => ['card'],
                 'mode' => 'payment',
                 'line_items' => $lineItems,
-                'success_url' => config('app.frontend_url', 'http://localhost:3000') . '/order/' . $order->order_id,
-                'cancel_url' => config('app.frontend_url', 'http://localhost:3000') . '/order/' . $order->order_id,
+                'success_url' => 'https://sarengmedequip-alpha.vercel.app/order/' . $order->order_id,
+                'cancel_url' => 'https://sarengmedequip-alpha.vercel.app/order/' . $order->order_id,
                 'metadata' => [
                     'order_id' => $order->id,
                 ],
