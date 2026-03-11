@@ -10,6 +10,7 @@ use App\Http\Controllers\OrderListController;
 use App\Http\Controllers\ProductBatchController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ShopController;
+use App\Http\Controllers\StripeIdController;
 use App\Http\Controllers\StripeWebhookController;
 
 use Illuminate\Support\Facades\Route;
@@ -98,6 +99,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/order/{order_id}/confirm-payment', [OrderController::class, 'confirmOrderPayment']);
     Route::post('/order/create', [OrderListController::class, 'store']);
     Route::patch('/order/{order_id}/update', [OrderController::class, 'updateOrder']);
+    Route::patch('/order/stripe-id', [StripeIdController::class, 'updateRecord']);
     Route::delete('/order/{order_id}', [OrderController::class, 'deleteOrder']);
     
 

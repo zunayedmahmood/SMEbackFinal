@@ -25,10 +25,14 @@ class OrderListController extends Controller
             'customer_details.phone' => ['required', 'string'],
 
             'payment_method' => ['required', 'in:COD,Online'],
+            'payment_status' => ['required', 'in:Unpaid,Paid,Failed'],
 
             'address.details' => ['required', 'string'],
             'address.selection.division' => ['required', 'string'],
             'address.selection.district' => ['required', 'string'],
+
+            'stripe_checkout_session_id' => ['nullable', 'string', 'required_if:payment_method,Online'],
+            'stripe_payment_intent_id'   => ['nullable', 'string'],
         ]);
 
         $formattedProducts = [];
@@ -36,12 +40,26 @@ class OrderListController extends Controller
             $formattedProducts[$product['id']] = $product['qty'];
         }
 
+        $stripeData = [];
+        if ($validated['payment_method'] === 'Online') {
+            $stripeData = [
+                'stripe_checkout_session_id' => $validated['stripe_checkout_session_id'] ?? null,
+                'stripe_payment_intent_id'   => $validated['stripe_payment_intent_id'] ?? null,
+            ];
+        }
+
         $order = CreateOrderAction::run(
             $validated['customer_details'],
             $validated['payment_method'],
             $formattedProducts,
-            $validated['address']
+            $validated['address'],
+            $stripeData
         );
+
+        // If it was manually created as Paid, confirm it (which commits inventory if not already done)
+        if ($validated['payment_status'] === 'Paid') {
+            $order->confirm();
+        }
 
         return response()->json([
             'success' => true,

@@ -19,6 +19,7 @@ class CreateOrderAction
      * @param string $paymentMethod
      * @param array $orderedProducts [productId => qty]
      * @param array $address
+     * @param array $stripeData [checkoutId, paymentId]
      * @return Order
      * @throws Exception
      */
@@ -26,9 +27,10 @@ class CreateOrderAction
         array $customerDetails,
         string $paymentMethod,
         array $orderedProducts,
-        array $address
+        array $address,
+        array $stripeData = []
     ): Order {
-        return DB::transaction(function () use ($customerDetails, $paymentMethod, $orderedProducts, $address) {
+        return DB::transaction(function () use ($customerDetails, $paymentMethod, $orderedProducts, $address, $stripeData) {
             $processedProducts = [];
             $subtotal = 0;
 
@@ -43,9 +45,9 @@ class CreateOrderAction
                 $subtotal += $lineTotal;
 
                 $processedProducts[] = [
-                    'id' => $product->id,
-                    'name' => $product->name,
-                    'qty' => (int) $qty,
+                    'id'    => $product->id,
+                    'name'  => $product->name,
+                    'qty'   => (int) $qty,
                     'price' => (float) $product->selling_price,
                     'total' => $lineTotal,
                 ];
@@ -62,10 +64,10 @@ class CreateOrderAction
             $orderList = OrderList::firstOrCreate();
 
             // Create Order
-            return $orderList->orders()->create([
+            $order = $orderList->orders()->create([
                 'order_id'         => Order::generateUniqueId(),
-                'order_status'     => $paymentMethod === 'COD' ? 'Confirmed' : 'Pending',
-                'payment_status'   => $paymentMethod === 'COD' ? 'Paid' : 'Unpaid',
+                'order_status'     => 'Pending',
+                'payment_status'   => 'Unpaid',
                 'payment_method'   => $paymentMethod,
                 'ordered_products' => $processedProducts,
                 'customer_details' => $customerDetails,
@@ -73,14 +75,30 @@ class CreateOrderAction
                 'delivery_charge'  => $deliveryCharge,
                 'total_price'      => $totalPrice,
             ]);
+
+            // If stripe data is provided and method is Online
+            if ($paymentMethod === 'Online' && !empty($stripeData['stripe_checkout_session_id'])) {
+                \App\Models\StripeId::setStripeIds(
+                    $order,
+                    $stripeData['stripe_checkout_session_id'],
+                    $stripeData['stripe_payment_intent_id'] ?? null
+                );
+            }
+
+            // Handle COD or manual confirmation
+            if ($paymentMethod === 'COD') {
+                $order->confirm();
+            }
+
+            return $order;
         });
     }
 
     /**
      * Static helper for running the action.
      */
-    public static function run(array $customerDetails, string $paymentMethod, array $orderedProducts, array $address): Order
+    public static function run(array $customerDetails, string $paymentMethod, array $orderedProducts, array $address, array $stripeData = []): Order
     {
-        return (new self())->execute($customerDetails, $paymentMethod, $orderedProducts, $address);
+        return (new self())->execute($customerDetails, $paymentMethod, $orderedProducts, $address, $stripeData);
     }
 }
