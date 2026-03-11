@@ -275,8 +275,9 @@ class Product extends Model
 
     public function getTotalCount(): int
     {
-        $this->updateTotalCount();
-        return (int) $this->total_count;
+        // Read-only: sum directly from batches without writing to the DB.
+        // Use updateTotalCount() explicitly when you need to persist the aggregated value.
+        return (int) $this->productBatches()->sum('count');
     }
 
     /**

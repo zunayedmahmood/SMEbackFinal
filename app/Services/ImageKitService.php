@@ -4,6 +4,7 @@ namespace App\Services;
 
 use ImageKit\ImageKit;
 use App\Models\ImageKitFileId;
+use Illuminate\Support\Facades\Log;
 
 class ImageKitService
 {
@@ -93,7 +94,8 @@ class ImageKitService
         $fileId = ImageKitFileId::getFileIdByUrl($url);
 
         if (!$fileId) {
-            throw new \RuntimeException("No ImageKit fileId found for URL: {$url}");
+            Log::warning("ImageKitService::delete – no fileId found for URL: {$url}. Skipping ImageKit deletion.");
+            return;
         }
 
         $this->imageKit->deleteFile($fileId);

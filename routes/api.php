@@ -11,7 +11,7 @@ use App\Http\Controllers\ProductBatchController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\StripeWebhookController;
-use App\Http\Controllers\TransactionIdController;
+
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -57,16 +57,16 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 
-    // Admin Category
-    Route::post('/category', [CategoryController::class, 'createNewCategory']);
-    Route::get('/category/{id}', [CategoryController::class, 'getCategoryById']);
-    Route::get('/category', [CategoryController::class, 'getAllCategories']);
-    Route::patch('/category/{id}', [CategoryController::class, 'updateCategoryName']);
-    Route::delete('/category/{id}', [CategoryController::class, 'deleteCategory']);
-
-    // Admin Category Image
+    // Admin Category Image (must be registered BEFORE the wildcard /category/{id} route)
     Route::post('/category/image', [CategoryImageController::class, 'saveImage']);
     Route::patch('/category/image/update', [CategoryImageController::class, 'updateImage']);
+
+    // Admin Category
+    Route::post('/category', [CategoryController::class, 'createNewCategory']);
+    Route::get('/category', [CategoryController::class, 'getAllCategories']);
+    Route::get('/category/{id}', [CategoryController::class, 'getCategoryById']);
+    Route::patch('/category/{id}', [CategoryController::class, 'updateCategoryName']);
+    Route::delete('/category/{id}', [CategoryController::class, 'deleteCategory']);
     Route::delete('/category/{id}/image', [CategoryImageController::class, 'deleteImage']);
 
     // Admin Product

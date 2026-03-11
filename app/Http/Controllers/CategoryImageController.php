@@ -24,10 +24,17 @@ class CategoryImageController extends Controller
             ], 422);
         }
 
-        $categoryImage = CategoryImage::saveImage(
-            $request->category_id,
-            $request->file('image_url')
-        );
+        try {
+            $categoryImage = CategoryImage::saveImage(
+                $request->category_id,
+                $request->file('image_url')
+            );
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to upload image: ' . $e->getMessage(),
+            ], 500);
+        }
 
         return response()->json([
             'success'   => true,
@@ -69,7 +76,15 @@ class CategoryImageController extends Controller
         }
 
         $categoryImage = CategoryImage::where('category_id', $request->category_id)->first();
-        $categoryImage->updateImage($request->file('image_url'));
+
+        try {
+            $categoryImage->updateImage($request->file('image_url'));
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update image: ' . $e->getMessage(),
+            ], 500);
+        }
 
         return response()->json([
             'success'   => true,
@@ -89,7 +104,14 @@ class CategoryImageController extends Controller
             ], 404);
         }
 
-        $categoryImage->deleteImage();
+        try {
+            $categoryImage->deleteImage();
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete image: ' . $e->getMessage(),
+            ], 500);
+        }
 
         return response()->json([
             'success' => true,

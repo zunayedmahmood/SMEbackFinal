@@ -50,13 +50,18 @@ class CategoryImage extends Model
     public function updateImage(UploadedFile $file): bool
     {
         $imageKit = new ImageKitService();
+        $oldUrl   = $this->image_url;
 
-        if ($this->image_url) {
-            $imageKit->delete($this->image_url);
+        // Upload first – if this throws, the old image remains intact
+        $this->image_url = $imageKit->upload($file, 'categories');
+        $saved = $this->save();
+
+        // Only delete the old image after the new one is saved successfully
+        if ($saved && $oldUrl) {
+            $imageKit->delete($oldUrl);
         }
 
-        $this->image_url = $imageKit->upload($file, 'categories');
-        return $this->save();
+        return $saved;
     }
 
     public function deleteImage(): bool
