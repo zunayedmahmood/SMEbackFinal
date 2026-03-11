@@ -4,7 +4,6 @@ namespace App\Services;
 
 use ImageKit\ImageKit;
 use App\Models\ImageKitFileId;
-use Illuminate\Support\Facades\Log;
 
 class ImageKitService
 {
@@ -21,6 +20,7 @@ class ImageKitService
 
     /**
      * Upload a file to ImageKit and store the fileId against the URL.
+     * If the DB insert fails, the file is deleted from ImageKit to prevent orphans.
      *
      * @param  \Illuminate\Http\UploadedFile  $file
      * @param  string  $folder   e.g. 'products', 'categories'
@@ -30,12 +30,7 @@ class ImageKitService
      */
     public function upload($file, string $folder): string
     {
-        $fileName = $this->generateUniqueFileName($file->getClientOriginalExtension());
-
-        // BUG 1 FIXED: base64_encode the content and prefix with
-        // "data:<mime>;base64," — the ImageKit PHP SDK requires the full
-        // data URI format when passing base64, otherwise it treats the
-        // string as a URL and tries to fetch it, causing a 500.
+        $fileName   = $this->generateUniqueFileName($file->getClientOriginalExtension());
         $mimeType   = $file->getMimeType();
         $base64Data = base64_encode(file_get_contents($file->getRealPath()));
         $fileData   = "data:{$mimeType};base64,{$base64Data}";
@@ -44,17 +39,9 @@ class ImageKitService
             'file'              => $fileData,
             'fileName'          => $fileName,
             'folder'            => $folder,
-            // BUG 2 FIXED: must be boolean false, not the string "false".
-            // PHP's false casts to "" (empty string) in JSON which the SDK
-            // may not handle — use explicit false literal.
             'useUniqueFileName' => false,
         ]);
 
-        // BUG 3 FIXED: the ImageKit PHP SDK (v3+) returns an object where
-        // the success response is at $response->result and errors are at
-        // $response->error. However in some SDK versions the response is
-        // a plain object with ->success / ->error at the top level.
-        // Check both shapes defensively.
         $error  = $response->error  ?? null;
         $result = $response->result ?? $response;
 
@@ -71,10 +58,19 @@ class ImageKitService
         $url    = $result->url;
         $fileId = $result->fileId;
 
-        ImageKitFileId::create([
-            'url'     => $url,
-            'file_id' => $fileId,
-        ]);
+        // If the DB insert fails, delete the uploaded file from ImageKit
+        // so we don't end up with orphaned files that can never be deleted.
+        try {
+            ImageKitFileId::create([
+                'url'     => $url,
+                'file_id' => $fileId,
+            ]);
+        } catch (\Throwable $e) {
+            $this->imageKit->deleteFile($fileId);
+            throw new \RuntimeException(
+                'Failed to record ImageKit fileId — upload has been rolled back. DB error: ' . $e->getMessage()
+            );
+        }
 
         return $url;
     }
@@ -94,8 +90,7 @@ class ImageKitService
         $fileId = ImageKitFileId::getFileIdByUrl($url);
 
         if (!$fileId) {
-            Log::warning("ImageKitService::delete – no fileId found for URL: {$url}. Skipping ImageKit deletion.");
-            return;
+            throw new \RuntimeException("No ImageKit fileId found for URL: {$url}");
         }
 
         $this->imageKit->deleteFile($fileId);
