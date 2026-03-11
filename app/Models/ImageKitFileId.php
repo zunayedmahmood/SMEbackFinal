@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class ImageKitFileId extends Model
 {
+    protected $table = 'imagekit_file_ids';
+
     protected $fillable = [
         'url',
         'file_id',

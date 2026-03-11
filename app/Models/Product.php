@@ -62,7 +62,7 @@ class Product extends Model
     | Required : name, selling_price
     | Optional : image_src (array of UploadedFile), description, category (id)
     |
-    | - Stores images in storage/app/public/images
+    | - Stores images in ImageKit (folder: products)
     | - If a product with the same name already exists, appends _1, _2, etc.
     | - Attaches the product to the given category via the pivot table
     |

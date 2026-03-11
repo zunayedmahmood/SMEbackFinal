@@ -223,15 +223,9 @@ class ProductController extends Controller
      */
     public function deleteProductById(int $id): JsonResponse
     {
-        $product = Product::findOrFail($id);
-        
-        // Clean up stored images
-        $imageKit = new \App\Services\ImageKitService();
-        foreach ($product->image_src ?? [] as $url) {
-            $imageKit->delete($url);
+        if (!Product::deleteProductById($id)) {
+            throw new \Symfony\Component\HttpKernel\Exception\NotFoundHttpException("Product not found.");
         }
-
-        $product->delete();
 
         return response()->json([
             'success' => true,

@@ -23,7 +23,8 @@ return new class extends Migration
             $table->enum('order_status', [
                 'Pending',
                 'Confirmed',
-                'Cancelled'
+                'Cancelled',
+                'Delivered'
             ])->default('Pending');
 
             // Payment lifecycle

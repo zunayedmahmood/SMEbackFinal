@@ -92,12 +92,23 @@ class Order extends Model
      */
     public function confirm(): bool
     {
-        if ($this->order_status === 'Confirmed') {
+        if ($this->order_status === 'Confirmed' && $this->payment_status === 'Paid') {
+            return false;
+        }
+
+        // Finalize inventory if reservations exist
+        try {
+            if ($this->reservedProducts()->exists()) {
+                \App\Actions\CommitInventoryAction::run($this);
+            }
+        } catch (\Exception $e) {
+            // Log or rethrow if inventory commit is critical
+            \Illuminate\Support\Facades\Log::error("Inventory commit failed during order confirmation: " . $e->getMessage());
             return false;
         }
 
         return $this->update([
-            'order_status' => 'Confirmed',
+            'order_status'   => 'Confirmed',
             'payment_status' => 'Paid',
         ]);
     }
