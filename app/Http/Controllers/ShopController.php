@@ -70,8 +70,10 @@ class ShopController extends Controller
                 $validated['orderData']['address']
             );
 
-            // Step 2: Reserve Inventory
-            ReserveInventoryAction::run($order);
+            // Step 2: Reserve Inventory (Online only — COD is committed immediately in CreateOrderAction)
+            if ($order->payment_method === 'Online') {
+                ReserveInventoryAction::run($order);
+            }
 
             $response = [
                 'success' => true,

@@ -85,9 +85,21 @@ class CreateOrderAction
                 );
             }
 
-            // Handle COD or manual confirmation
+            // Handle COD: sell inventory immediately, no reservation needed
             if ($paymentMethod === 'COD') {
-                $order->confirm();
+                foreach ($processedProducts as $item) {
+                    $product = Product::findOrFail($item['id']);
+                    $result  = $product->sellProduct($item['qty']);
+
+                    if (!$result['success']) {
+                        throw new Exception("Insufficient stock for product: {$product->name}.");
+                    }
+                }
+
+                $order->update([
+                    'order_status'   => 'Confirmed',
+                    'payment_status' => 'Paid',
+                ]);
             }
 
             return $order;

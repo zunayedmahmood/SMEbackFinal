@@ -17,7 +17,9 @@ class OrderController extends Controller
      */
     public function getOrderById(string $order_id): JsonResponse
     {
-        $order = Order::where('order_id', $order_id)->firstOrFail();
+        $order = Order::where('order_id', $order_id)
+            ->with('stripeIdRecord')
+            ->firstOrFail();
 
         return response()->json([
             'success' => true,
@@ -73,7 +75,7 @@ class OrderController extends Controller
     public function updateOrder(Request $request, string $order_id): JsonResponse
     {
         $validated = $request->validate([
-            'order_status'               => 'nullable|string|in:Pending,Confirmed,Cancelled,Delivered',
+            'order_status'               => 'nullable|string|in:Pending,Confirmed,Cancelled',
             'payment_method'             => 'nullable|string|in:COD,Online',
             'payment_status'             => 'nullable|string|in:Unpaid,Paid,Failed',
             'ordered_products'           => 'nullable|array',

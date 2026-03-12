@@ -56,8 +56,9 @@ class OrderListController extends Controller
             $stripeData
         );
 
-        // If it was manually created as Paid, confirm it (which commits inventory if not already done)
-        if ($validated['payment_status'] === 'Paid') {
+        // For Online orders manually marked as Paid, confirm them (commits reserved inventory).
+        // COD orders are already committed inside CreateOrderAction — no double-commit needed.
+        if ($validated['payment_status'] === 'Paid' && $validated['payment_method'] === 'Online') {
             $order->confirm();
         }
 
@@ -91,17 +92,15 @@ class OrderListController extends Controller
          * Custom sorting: 
          * 1. Pending
          * 2. Confirmed
-         * 3. Delivered
-         * 4. Cancelled
+         * 3. Cancelled
          * Within each group, newest first.
          */
         $orders = $query->orderByRaw("
                 CASE 
                     WHEN order_status = 'Pending' THEN 0
                     WHEN order_status = 'Confirmed' THEN 1
-                    WHEN order_status = 'Delivered' THEN 2
-                    WHEN order_status = 'Cancelled' THEN 3
-                    ELSE 4
+                    WHEN order_status = 'Cancelled' THEN 2
+                    ELSE 3
                 END
             ")
             ->orderBy('created_at', 'desc')

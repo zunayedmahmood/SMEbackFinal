@@ -24,7 +24,6 @@ return new class extends Migration
                 'Pending',
                 'Confirmed',
                 'Cancelled',
-                'Delivered'
             ])->default('Pending');
 
             // Payment lifecycle
