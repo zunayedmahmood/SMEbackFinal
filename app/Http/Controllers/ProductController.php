@@ -69,21 +69,25 @@ class ProductController extends Controller
     public function createProduct(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name'          => 'required|string|max:255',
-            'selling_price' => 'required|numeric|min:0',
-            'image_src'     => 'nullable|array',
-            'image_src.*'   => 'image|mimes:jpeg,png,jpg,webp|max:5120',
-            'description'   => 'nullable|string',
-            'categories_id'   => 'nullable|array',
-            'categories_id.*' => 'integer|exists:categories,id',
+            'name'                => 'required|string|max:255',
+            'selling_price'       => 'nullable|numeric|min:0',
+            'image_src'           => 'nullable|array',
+            'image_src.*'         => 'image|mimes:jpeg,png,jpg,webp|max:5120',
+            'description'         => 'nullable|string',
+            'categories_id'       => 'nullable|array',
+            'categories_id.*'     => 'integer|exists:categories,id',
+            'has_dynamic_pricing' => 'nullable|boolean',
+            'price_slabs'         => 'nullable|array',
         ]);
 
         $product = Product::createProduct(
             $request->name,
-            (float)$request->selling_price,
+            $request->selling_price !== null ? (float)$request->selling_price : null,
             $request->file('image_src', []),
             $request->description,
-            $request->categories_id
+            $request->categories_id,
+            $request->boolean('has_dynamic_pricing'),
+            $request->price_slabs
         );
 
         return response()->json([
@@ -153,14 +157,42 @@ class ProductController extends Controller
         $product = Product::findOrFail($id);
 
         $validated = $request->validate([
-            'selling_price' => 'required|numeric|min:0',
+            'selling_price' => 'nullable|numeric|min:0',
         ]);
 
-        $product->updateSellingPrice((float)$validated['selling_price']);
+        $product->updateSellingPrice($validated['selling_price'] !== null ? (float)$validated['selling_price'] : null);
 
         return response()->json([
             'success' => true,
             'message' => 'Selling price updated successfully.',
+            'data'    => $product
+        ], 200);
+    }
+
+    /**
+     * Update dynamic pricing toggle and slabs.
+     *
+     * @param  Request  $request
+     * @param  int  $id
+     * @return JsonResponse
+     */
+    public function updateDynamicPricing(Request $request, int $id): JsonResponse
+    {
+        $product = Product::findOrFail($id);
+
+        $validated = $request->validate([
+            'has_dynamic_pricing' => 'required|boolean',
+            'price_slabs'         => 'nullable|array',
+        ]);
+
+        $product->update([
+            'has_dynamic_pricing' => $validated['has_dynamic_pricing'],
+            'price_slabs'         => $validated['price_slabs'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Dynamic pricing updated successfully.',
             'data'    => $product
         ], 200);
     }

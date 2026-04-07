@@ -16,6 +16,8 @@ class Product extends Model
         'total_count',
         'image_src',
         'description',
+        'has_dynamic_pricing',
+        'price_slabs',
     ];
 
     /*
@@ -31,8 +33,10 @@ class Product extends Model
     }
 
     protected $casts = [
-        'image_src'     => 'array',
-        'selling_price' => 'decimal:2',
+        'image_src'          => 'array',
+        'selling_price'      => 'decimal:2',
+        'has_dynamic_pricing' => 'boolean',
+        'price_slabs'        => 'array',
     ];
 
     /*
@@ -70,10 +74,12 @@ class Product extends Model
 
     public static function createProduct(
         string $name,
-        float  $sellingPrice,
+        ?float $sellingPrice = null,
         array  $imageSrc = [],
         ?string $description = null,
         ?array  $categories_id = [],
+        bool   $hasDynamicPricing = false,
+        ?array $priceSlabs = null,
     ): self {
         // ── Resolve unique name ──────────────────────────────────────
         $finalName = $name;
@@ -94,10 +100,12 @@ class Product extends Model
 
         // ── Create the product ──────────────────────────────────────
         $product = self::create([
-            'name'          => $finalName,
-            'selling_price' => round($sellingPrice, 2),
-            'image_src'     => empty($storedPaths) ? [] : $storedPaths,
-            'description'   => $description,
+            'name'                => $finalName,
+            'selling_price'       => $sellingPrice !== null ? round($sellingPrice, 2) : null,
+            'image_src'           => empty($storedPaths) ? [] : $storedPaths,
+            'description'         => $description,
+            'has_dynamic_pricing' => $hasDynamicPricing,
+            'price_slabs'         => $priceSlabs,
         ]);
 
         // ── Attach category (pivot) ─────────────────────────────────
@@ -351,10 +359,38 @@ class Product extends Model
     |--------------------------------------------------------------------------
     */
 
-    public function updateSellingPrice(float $newPrice): void
+    public function updateSellingPrice(?float $newPrice): void
     {
-        $this->selling_price = round($newPrice, 2);
+        $this->selling_price = $newPrice !== null ? round($newPrice, 2) : null;
         $this->save();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Dynamic Pricing Logic
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Get the unit price for a given quantity.
+     * 
+     * @param int $qty
+     * @return float|null
+     */
+    public function getPriceForQuantity(int $qty): ?float
+    {
+        if ($this->has_dynamic_pricing && !empty($this->price_slabs)) {
+            foreach ($this->price_slabs as $slab) {
+                $min = $slab['min_qty'] ?? 0;
+                $max = $slab['max_qty'] ?? PHP_INT_MAX;
+
+                if ($qty >= $min && $qty <= $max) {
+                    return (float) $slab['price'];
+                }
+            }
+        }
+
+        return $this->selling_price ? (float) $this->selling_price : null;
     }
 
     /*

@@ -83,7 +83,7 @@ class Shop extends Model
             $response[] = [
                 'product_id' => $productId,
                 'qty' => $qty,
-                'price' => $product->selling_price,
+                'price' => $product->getPriceForQuantity($qty),
                 'product_name' => $product->name,
                 'image_src' => $product->image_src,
                 'available_stock' => $availableStock,

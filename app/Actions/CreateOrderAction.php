@@ -41,14 +41,15 @@ class CreateOrderAction
                     throw new ModelNotFoundException("Product ID {$productId} not found.");
                 }
 
-                $lineTotal = (float) $product->selling_price * (int) $qty;
+                $price = (float) $product->getPriceForQuantity((int) $qty);
+                $lineTotal = $price * (int) $qty;
                 $subtotal += $lineTotal;
 
                 $processedProducts[] = [
                     'id'    => $product->id,
                     'name'  => $product->name,
                     'qty'   => (int) $qty,
-                    'price' => (float) $product->selling_price,
+                    'price' => $price,
                     'total' => $lineTotal,
                 ];
             }

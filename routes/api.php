@@ -78,6 +78,7 @@ Route::middleware('auth:sanctum')->group(function () {
     
     Route::patch('/product/{id}/name', [ProductController::class, 'updateProductName']);
     Route::patch('/product/{id}/price', [ProductController::class, 'updateSellingPrice']);
+    Route::patch('/product/{id}/dynamic-pricing', [ProductController::class, 'updateDynamicPricing']);
     Route::patch('/product/{id}/description', [ProductController::class, 'updateProductDescription']);
     
     Route::post('/product/{id}/categories', [ProductController::class, 'addCategory']);
