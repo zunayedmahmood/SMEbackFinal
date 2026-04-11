@@ -68,6 +68,10 @@ class ProductController extends Controller
      */
     public function createProduct(Request $request): JsonResponse
     {
+        if ($request->has('price_slabs') && is_string($request->price_slabs)) {
+            $request->merge(['price_slabs' => json_decode($request->price_slabs, true)]);
+        }
+
         $validated = $request->validate([
             'name'                => 'required|string|max:255',
             'selling_price'       => 'nullable|numeric|min:0',
@@ -181,6 +185,10 @@ class ProductController extends Controller
     public function updateDynamicPricing(Request $request, int $id): JsonResponse
     {
         $product = Product::findOrFail($id);
+
+        if ($request->has('price_slabs') && is_string($request->price_slabs)) {
+            $request->merge(['price_slabs' => json_decode($request->price_slabs, true)]);
+        }
 
         $validated = $request->validate([
             'has_dynamic_pricing' => 'required|boolean',
