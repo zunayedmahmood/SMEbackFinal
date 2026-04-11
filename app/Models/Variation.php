@@ -17,12 +17,19 @@ class Variation extends Model
         'image_src',
     ];
 
+    protected $appends = ['available_stock'];
+
     protected $casts = [
         'selling_price' => 'decimal:2',
         'has_dynamic_pricing' => 'boolean',
         'price_slabs' => 'array',
         'image_src' => 'array',
     ];
+
+    public function setPriceSlabsAttribute($value)
+    {
+        $this->attributes['price_slabs'] = is_string($value) ? json_decode($value, true) : $value;
+    }
 
     public function product(): BelongsTo
     {
@@ -52,6 +59,11 @@ class Variation extends Model
     public function getAvailableStock(): int
     {
         return $this->getTotalCount() - $this->getReservedQty();
+    }
+
+    public function getAvailableStockAttribute(): int
+    {
+        return $this->getAvailableStock();
     }
 
     public function getPriceForQuantity(int $qty): ?float

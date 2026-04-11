@@ -21,6 +21,8 @@ class Product extends Model
         'has_variations',
     ];
 
+    protected $appends = ['available_stock'];
+
     /*
     |--------------------------------------------------------------------------
     | Relationships
@@ -40,6 +42,11 @@ class Product extends Model
         'price_slabs'        => 'array',
         'has_variations'     => 'boolean',
     ];
+
+    public function setPriceSlabsAttribute($value)
+    {
+        $this->attributes['price_slabs'] = is_string($value) ? json_decode($value, true) : $value;
+    }
 
     /*
     |--------------------------------------------------------------------------
@@ -138,7 +145,7 @@ class Product extends Model
      */
     public static function getProductById(int $id): ?self
     {
-        return self::with(['productBatches', 'categories'])->find($id);
+        return self::with(['productBatches', 'categories', 'variations', 'variations.productBatches'])->find($id);
     }
 
     /**
@@ -314,6 +321,11 @@ class Product extends Model
             return (int) $this->variations->sum(fn ($variation) => $variation->getAvailableStock());
         }
         return $this->getTotalCount() - $this->getReservedQty();
+    }
+
+    public function getAvailableStockAttribute(): int
+    {
+        return $this->getAvailableStock();
     }
 
     /*

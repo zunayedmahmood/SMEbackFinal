@@ -52,7 +52,7 @@ class ProductController extends Controller
      */
     public function getProductById(int $id): JsonResponse
     {
-        $product = Product::with(['productBatches', 'categories'])->findOrFail($id);
+        $product = Product::with(['productBatches', 'categories', 'variations', 'variations.productBatches'])->findOrFail($id);
 
         return response()->json([
             'success' => true,
@@ -143,6 +143,7 @@ class ProductController extends Controller
         ]);
 
         $product->updateDescription($validated['description']);
+        $product->load(['variations', 'variations.productBatches']);
 
         return response()->json([
             'success' => true,
@@ -167,6 +168,7 @@ class ProductController extends Controller
         ]);
 
         $product->updateSellingPrice($validated['selling_price'] !== null ? (float)$validated['selling_price'] : null);
+        $product->load(['variations', 'variations.productBatches']);
 
         return response()->json([
             'success' => true,
@@ -199,6 +201,7 @@ class ProductController extends Controller
             'has_dynamic_pricing' => $validated['has_dynamic_pricing'],
             'price_slabs'         => $validated['price_slabs'],
         ]);
+        $product->load(['variations', 'variations.productBatches']);
 
         return response()->json([
             'success' => true,
