@@ -34,20 +34,37 @@ class CreateOrderAction
             $processedProducts = [];
             $subtotal = 0;
 
-            foreach ($orderedProducts as $productId => $qty) {
-                $product = Product::find($productId);
+            foreach ($orderedProducts as $itemRequest) {
+                $productId = $itemRequest['product_id'];
+                $variationId = $itemRequest['variation_id'] ?? null;
+                $qty = $itemRequest['quantity'];
+
+                $product = Product::with('variations')->find($productId);
 
                 if (!$product) {
                     throw new ModelNotFoundException("Product ID {$productId} not found.");
                 }
 
-                $price = (float) $product->getPriceForQuantity((int) $qty);
+                if ($product->has_variations && !$variationId) {
+                    throw new Exception("Variation selection required for product: {$product->name}.");
+                }
+
+                $price = (float) $product->getPriceForQuantity((int) $qty, $variationId);
+                $variationName = null;
+                if ($variationId && $product->has_variations) {
+                     $variation = $product->variations->find($variationId);
+                     if ($variation) {
+                         $variationName = $variation->name;
+                     }
+                }
+
                 $lineTotal = $price * (int) $qty;
                 $subtotal += $lineTotal;
 
                 $processedProducts[] = [
                     'id'    => $product->id,
-                    'name'  => $product->name,
+                    'variation_id' => $variationId,
+                    'name'  => $variationName ? $product->name . ' (' . $variationName . ')' : $product->name,
                     'qty'   => (int) $qty,
                     'price' => $price,
                     'total' => $lineTotal,
@@ -90,10 +107,10 @@ class CreateOrderAction
             if ($paymentMethod === 'COD') {
                 foreach ($processedProducts as $item) {
                     $product = Product::findOrFail($item['id']);
-                    $result  = $product->sellProduct($item['qty']);
+                    $result  = $product->sellProduct($item['qty'], $item['variation_id'] ?? null);
 
                     if (!$result['success']) {
-                        throw new Exception("Insufficient stock for product: {$product->name}.");
+                        throw new Exception("Insufficient stock for product: {$item['name']}.");
                     }
                 }
 

@@ -40,6 +40,7 @@ class ShopController extends Controller
         $validated = $request->validate([
             'products' => ['required', 'array'],
             'products.*.product_id' => ['required', 'integer', 'exists:products,id'],
+            'products.*.variation_id' => ['nullable', 'integer', 'exists:variations,id'],
             'products.*.quantity' => ['required', 'integer', 'min:1'],
 
             'orderData.customer_details.name' => ['required', 'string'],
@@ -57,8 +58,20 @@ class ShopController extends Controller
         ]);
 
         $formattedProducts = [];
-        foreach ($validated['products'] as $product) {
-            $formattedProducts[$product['product_id']] = $product['quantity'];
+        foreach ($validated['products'] as $item) {
+            $product = Product::find($item['product_id']);
+            if ($product->has_variations && empty($item['variation_id'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Variation selection required for: {$product->name}"
+                ], 422);
+            }
+
+            $formattedProducts[] = [
+                'product_id' => $item['product_id'],
+                'variation_id' => $item['variation_id'] ?? null,
+                'quantity' => $item['quantity']
+            ];
         }
 
         return DB::transaction(function () use ($validated, $formattedProducts) {
@@ -135,6 +148,7 @@ class ShopController extends Controller
         $validated = $request->validate([
             'items' => ['required', 'array'],
             'items.*.product_id' => ['required', 'integer'],
+            'items.*.variation_id' => ['nullable', 'integer'],
             'items.*.qty' => ['required', 'integer', 'min:1'],
         ]);
 

@@ -78,6 +78,7 @@ class ProductController extends Controller
             'categories_id.*'     => 'integer|exists:categories,id',
             'has_dynamic_pricing' => 'nullable|boolean',
             'price_slabs'         => 'nullable|array',
+            'has_variations'      => 'nullable|boolean',
         ]);
 
         $product = Product::createProduct(
@@ -87,7 +88,8 @@ class ProductController extends Controller
             $request->description,
             $request->categories_id,
             $request->boolean('has_dynamic_pricing'),
-            $request->price_slabs
+            $request->price_slabs,
+            $request->boolean('has_variations')
         );
 
         return response()->json([
@@ -347,6 +349,124 @@ class ProductController extends Controller
         return response()->json([
             'success'     => true,
             'total_count' => $product->getTotalCount()
+        ], 200);
+    }
+
+    /**
+     * Update has_variations flag.
+     */
+    public function updateHasVariations(Request $request, int $id): JsonResponse
+    {
+        $product = Product::findOrFail($id);
+
+        $validated = $request->validate([
+            'has_variations' => 'required|boolean',
+        ]);
+
+        $product->update([
+            'has_variations' => $validated['has_variations']
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Variations flag updated successfully.',
+            'data'    => $product
+        ], 200);
+    }
+
+    /**
+     * Create variation for a product.
+     */
+    public function createVariation(Request $request, int $productId): JsonResponse
+    {
+        $product = Product::findOrFail($productId);
+
+        $validated = $request->validate([
+            'name'                => 'required|string|max:255',
+            'selling_price'       => 'nullable|numeric|min:0',
+            'has_dynamic_pricing' => 'nullable|boolean',
+            'price_slabs'         => 'nullable|array',
+            'images'              => 'nullable|array',
+            'images.*'            => 'image|mimes:jpeg,png,jpg,webp|max:5120',
+        ]);
+
+        $storedPaths = [];
+        if ($request->hasFile('images')) {
+            $imageKit = new \App\Services\ImageKitService();
+            foreach ($request->file('images') as $img) {
+                $storedPaths[] = $imageKit->upload($img, 'products');
+            }
+        }
+
+        $variation = $product->variations()->create([
+            'name'                => $validated['name'],
+            'selling_price'       => $request->selling_price !== null ? round((float)$request->selling_price, 2) : null,
+            'has_dynamic_pricing' => $request->boolean('has_dynamic_pricing'),
+            'price_slabs'         => $validated['price_slabs'] ?? null,
+            'image_src'           => empty($storedPaths) ? null : $storedPaths,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Variation created successfully.',
+            'data'    => $variation
+        ], 201);
+    }
+
+    /**
+     * Update variation details.
+     */
+    public function updateVariation(Request $request, int $variationId): JsonResponse
+    {
+        $variation = \App\Models\Variation::findOrFail($variationId);
+
+        $validated = $request->validate([
+            'name'                => 'nullable|string|max:255',
+            'selling_price'       => 'nullable|numeric|min:0',
+            'has_dynamic_pricing' => 'nullable|boolean',
+            'price_slabs'         => 'nullable|array',
+        ]);
+
+        if ($request->has('name')) {
+            $variation->name = $validated['name'];
+        }
+        if ($request->has('selling_price')) {
+            $variation->selling_price = $request->selling_price !== null ? round((float)$request->selling_price, 2) : null;
+        }
+        if ($request->has('has_dynamic_pricing')) {
+            $variation->has_dynamic_pricing = $request->boolean('has_dynamic_pricing');
+        }
+        if ($request->has('price_slabs')) {
+            $variation->price_slabs = $validated['price_slabs'];
+        }
+        $variation->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Variation updated successfully.',
+            'data'    => $variation
+        ], 200);
+    }
+
+    /**
+     * Delete a variation.
+     */
+    public function deleteVariation(int $variationId): JsonResponse
+    {
+        $variation = \App\Models\Variation::findOrFail($variationId);
+
+        if (!empty($variation->image_src)) {
+            $imageKit = new \App\Services\ImageKitService();
+            foreach ($variation->image_src as $url) {
+                $imageKit->delete($url);
+            }
+        }
+
+        $variation->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Variation deleted successfully.'
         ], 200);
     }
 }

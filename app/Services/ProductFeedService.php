@@ -52,12 +52,22 @@ class ProductFeedService
 
         // Filter by minimum price
         if (isset($filters['min_price'])) {
-            $query->where('selling_price', '>=', $filters['min_price']);
+            $query->where(function ($q) use ($filters) {
+                $q->where('selling_price', '>=', $filters['min_price'])
+                  ->orWhereHas('variations', function ($vQ) use ($filters) {
+                      $vQ->where('selling_price', '>=', $filters['min_price']);
+                  });
+            });
         }
 
         // Filter by maximum price
         if (isset($filters['max_price'])) {
-            $query->where('selling_price', '<=', $filters['max_price']);
+            $query->where(function ($q) use ($filters) {
+                $q->where('selling_price', '<=', $filters['max_price'])
+                  ->orWhereHas('variations', function ($vQ) use ($filters) {
+                      $vQ->where('selling_price', '<=', $filters['max_price']);
+                  });
+            });
         }
 
         // Search by name
@@ -85,11 +95,19 @@ class ProductFeedService
      */
     private function applySorting(Builder $query, string $sortBy): Builder
     {
+        if ($sortBy === 'price_low_high' || $sortBy === 'price_high_low') {
+            $query->leftJoin('variations', 'products.id', '=', 'variations.product_id')
+                ->selectRaw('products.*, COALESCE(products.selling_price, MIN(variations.selling_price)) as effective_min_price')
+                ->groupBy('products.id');
+            
+            return $sortBy === 'price_low_high' 
+                ? $query->orderBy('effective_min_price', 'asc')
+                : $query->orderBy('effective_min_price', 'desc');
+        }
+
         return match ($sortBy) {
             'newest' => $query->orderByDesc('created_at'),
             'most_sold' => $query->orderByDesc('sold_count'),
-            'price_low_high' => $query->orderBy('selling_price'),
-            'price_high_low' => $query->orderByDesc('selling_price'),
             default => $this->applyBlendedFeed($query),
         };
     }

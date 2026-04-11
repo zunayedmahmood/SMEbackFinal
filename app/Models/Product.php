@@ -18,6 +18,7 @@ class Product extends Model
         'description',
         'has_dynamic_pricing',
         'price_slabs',
+        'has_variations',
     ];
 
     /*
@@ -37,6 +38,7 @@ class Product extends Model
         'selling_price'      => 'decimal:2',
         'has_dynamic_pricing' => 'boolean',
         'price_slabs'        => 'array',
+        'has_variations'     => 'boolean',
     ];
 
     /*
@@ -48,6 +50,11 @@ class Product extends Model
     public function productBatches(): HasMany
     {
         return $this->hasMany(ProductBatch::class);
+    }
+
+    public function variations(): HasMany
+    {
+        return $this->hasMany(Variation::class);
     }
 
     /**
@@ -80,6 +87,7 @@ class Product extends Model
         ?array  $categories_id = [],
         bool   $hasDynamicPricing = false,
         ?array $priceSlabs = null,
+        bool   $hasVariations = false,
     ): self {
         // ── Resolve unique name ──────────────────────────────────────
         $finalName = $name;
@@ -106,6 +114,7 @@ class Product extends Model
             'description'         => $description,
             'has_dynamic_pricing' => $hasDynamicPricing,
             'price_slabs'         => $priceSlabs,
+            'has_variations'      => $hasVariations,
         ]);
 
         // ── Attach category (pivot) ─────────────────────────────────
@@ -133,11 +142,11 @@ class Product extends Model
     }
 
     /**
-     * Get every product (with batches & categories).
+     * Get every product (with batches, categories & variations).
      */
     public static function getAllProducts()
     {
-        return self::with(['productBatches', 'categories'])->get();
+        return self::with(['productBatches', 'categories', 'variations'])->get();
     }
 
     /**
@@ -145,7 +154,7 @@ class Product extends Model
      */
     public static function getAllProductsPaginated(int $perPage = 7, int $page = 1, ?string $search = null): array
     {
-        $query = self::with(['categories', 'productBatches'])
+        $query = self::with(['categories', 'productBatches', 'variations'])
             ->orderBy('created_at', 'desc');
 
         if ($search) {
@@ -293,7 +302,7 @@ class Product extends Model
      */
     public function getReservedQty(): int
     {
-        return (int) $this->reservedProducts()->sum('qty');
+        return (int) $this->reservedProducts()->whereNull('variation_id')->sum('qty');
     }
 
     /**
@@ -301,6 +310,9 @@ class Product extends Model
      */
     public function getAvailableStock(): int
     {
+        if ($this->has_variations) {
+            return (int) $this->variations->sum(fn ($variation) => $variation->getAvailableStock());
+        }
         return $this->getTotalCount() - $this->getReservedQty();
     }
 
@@ -310,8 +322,19 @@ class Product extends Model
     |--------------------------------------------------------------------------
     */
 
-    public function sellProduct(int $count): array
+    public function sellProduct(int $count, ?int $variationId = null): array
     {
+        if ($this->has_variations && $variationId) {
+            $variation = $this->variations()->find($variationId);
+            if ($variation) {
+                return $variation->sellProduct($count);
+            }
+            return [
+                'success' => false,
+                'message' => 'Variation not found',
+            ];
+        }
+
         if ($this->getTotalCount() < $count) {
             return [
                 'success' => false,
@@ -377,8 +400,15 @@ class Product extends Model
      * @param int $qty
      * @return float|null
      */
-    public function getPriceForQuantity(int $qty): ?float
+    public function getPriceForQuantity(int $qty, ?int $variationId = null): ?float
     {
+        if ($this->has_variations && $variationId) {
+            $variation = $this->variations()->find($variationId);
+            if ($variation) {
+                return $variation->getPriceForQuantity($qty);
+            }
+        }
+
         if ($this->has_dynamic_pricing && !empty($this->price_slabs)) {
             foreach ($this->price_slabs as $slab) {
                 $min = $slab['min_qty'] ?? 0;

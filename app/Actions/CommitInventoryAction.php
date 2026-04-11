@@ -28,7 +28,7 @@ class CommitInventoryAction
                 $product = $item->product;
 
                 // Deduct from batches
-                $result = $product->sellProduct($item->qty);
+                $result = $product->sellProduct($item->qty, $item->variation_id);
 
                 if (!$result['success']) {
                     throw new Exception("Failed to commit inventory for product: {$product->name}. Error: " . ($result['message'] ?? 'Unknown error'));

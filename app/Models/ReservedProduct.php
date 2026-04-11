@@ -9,6 +9,7 @@ class ReservedProduct extends Model
     protected $fillable = [
         'order_id',
         'product_id',
+        'variation_id',
         'qty',
         'price',
         'total',
@@ -17,6 +18,11 @@ class ReservedProduct extends Model
     public function product()
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function variation()
+    {
+        return $this->belongsTo(Variation::class);
     }
 
     public function order()

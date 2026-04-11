@@ -21,23 +21,29 @@ class ReserveInventoryAction
     {
         DB::transaction(function () use ($order) {
             foreach ($order->ordered_products as $item) {
-                // Lock the product record for update to ensure accurate available stock check
+                // Lock the product record or variation record
                 $product = Product::where('id', $item['id'])->lockForUpdate()->firstOrFail();
-                
-                // Get available stock (total_count - already reserved items)
-                $availableStock = $product->getAvailableStock();
+                $variationId = $item['variation_id'] ?? null;
 
-                if ($availableStock < $item['qty']) {
-                    throw new Exception("Insufficient stock for product: {$product->name}. Requested: {$item['qty']}, Available: {$availableStock}");
+                if ($product->has_variations && $variationId) {
+                    // Lock Variation
+                    $variation = \App\Models\Variation::where('id', $variationId)->lockForUpdate()->firstOrFail();
+                    $availableStock = $variation->getAvailableStock();
+                } else {
+                    $availableStock = $product->getAvailableStock();
                 }
 
-                // Create reserved product entry
+                if ($availableStock < $item['qty']) {
+                    throw new Exception("Insufficient stock for product: {$item['name']}. Requested: {$item['qty']}, Available: {$availableStock}");
+                }
+
                 ReservedProduct::create([
-                    'order_id'   => $order->id,
-                    'product_id' => $product->id,
-                    'qty'        => $item['qty'],
-                    'price'      => $item['price'],
-                    'total'      => $item['total'],
+                    'order_id'     => $order->id,
+                    'product_id'   => $product->id,
+                    'variation_id' => $variationId,
+                    'qty'          => $item['qty'],
+                    'price'        => $item['price'],
+                    'total'        => $item['total'],
                 ]);
             }
         });

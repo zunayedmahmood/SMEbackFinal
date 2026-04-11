@@ -9,6 +9,7 @@ class ProductBatch extends Model
 {
     protected $fillable = [
         'product_id',
+        'variation_id',
         'count',
         'cost_price',
     ];
@@ -28,27 +29,40 @@ class ProductBatch extends Model
         return $this->belongsTo(Product::class);
     }
 
+    public function variation(): BelongsTo
+    {
+        return $this->belongsTo(Variation::class);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Inventory Logic
     |--------------------------------------------------------------------------
     */
 
-    public static function addInventory(Product $product, float $costPrice, int $quantity): void
+    public static function addInventory(Product $product, float $costPrice, int $quantity, ?int $variationId = null): void
     {
         $costPrice = round($costPrice, 2);
 
-        $existingBatch = $product->productBatches()
-            ->whereRaw('ROUND(cost_price, 2) = ?', [$costPrice])
-            ->first();
+        $query = $product->productBatches()
+            ->whereRaw('ROUND(cost_price, 2) = ?', [$costPrice]);
+
+        if ($variationId) {
+            $query->where('variation_id', $variationId);
+        } else {
+            $query->whereNull('variation_id');
+        }
+
+        $existingBatch = $query->first();
 
         if ($existingBatch) {
             $existingBatch->count += $quantity;
             $existingBatch->save();
         } else {
             $product->productBatches()->create([
-                'cost_price' => $costPrice,
-                'count'      => $quantity,
+                'variation_id' => $variationId,
+                'cost_price'   => $costPrice,
+                'count'        => $quantity,
             ]);
         }
 

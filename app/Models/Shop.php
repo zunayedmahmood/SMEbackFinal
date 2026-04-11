@@ -58,18 +58,34 @@ class Shop extends Model
         foreach ($items as $item) {
 
             $productId = $item['product_id'];
+            $variationId = $item['variation_id'] ?? null;
             $qty = $item['qty'];
 
-            $product = Product::find($productId);
+            $product = Product::with('variations')->find($productId);
 
             if (!$product) {
                 $someProductRemoved = true;
                 continue;
             }
 
-            $maxStockReached = false;
+            if ($product->has_variations && $variationId) {
+                $variation = $product->variations->find($variationId);
+                if (!$variation) {
+                    $someProductRemoved = true;
+                    continue;
+                }
+                $availableStock = $variation->getAvailableStock();
+                $price = $variation->getPriceForQuantity($qty);
+                $productName = $product->name . ' (' . $variation->name . ')';
+                $imageSrc = !empty($variation->image_src) ? $variation->image_src : $product->image_src;
+            } else {
+                $availableStock = $product->getAvailableStock();
+                $price = $product->getPriceForQuantity($qty);
+                $productName = $product->name;
+                $imageSrc = $product->image_src;
+            }
 
-            $availableStock = $product->getAvailableStock();
+            $maxStockReached = false;
 
             if ($availableStock <= 0) {
                 $qty = 0;
@@ -82,10 +98,11 @@ class Shop extends Model
 
             $response[] = [
                 'product_id' => $productId,
+                'variation_id' => $variationId,
                 'qty' => $qty,
-                'price' => $product->getPriceForQuantity($qty),
-                'product_name' => $product->name,
-                'image_src' => $product->image_src,
+                'price' => $price !== null ? (float)$price : 0,
+                'product_name' => $productName,
+                'image_src' => $imageSrc,
                 'available_stock' => $availableStock,
                 'max_stock_reached' => $maxStockReached
             ];
