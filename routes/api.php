@@ -41,7 +41,7 @@ Route::get('/order/{order_id}', [OrderController::class, 'getOrderById']);
 Route::post('/order/manual-payment', [OrderController::class, 'manualOrderPayment']);
 
 // Delivery
-Route::post('/delivery-charge', [DeliveryChargeController::class, 'getDeliveryCharge']);
+Route::get('/admin/settings/delivery', [DeliveryChargeController::class, 'getDeliveryCharge']);
 
 // Contact
 Route::post('/contact', [ContactMessageController::class, 'saveMessage']);
@@ -113,4 +113,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Admin Contact
     Route::get('/admin/contact', [ContactMessageController::class, 'getMessages']);
     Route::delete('/admin/contact/{id}', [ContactMessageController::class, 'deleteMessage']);
+
+    // Admin Settings
+    Route::post('/admin/settings/delivery', [DeliveryChargeController::class, 'updateDeliveryCharge']);
 });
