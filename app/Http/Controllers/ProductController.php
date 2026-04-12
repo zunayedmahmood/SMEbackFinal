@@ -392,6 +392,10 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($productId);
 
+        if ($request->has('price_slabs') && is_string($request->price_slabs)) {
+            $request->merge(['price_slabs' => json_decode($request->price_slabs, true)]);
+        }
+
         $validated = $request->validate([
             'name'                => 'required|string|max:255',
             'selling_price'       => 'nullable|numeric|min:0',
