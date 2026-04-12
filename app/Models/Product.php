@@ -43,11 +43,6 @@ class Product extends Model
         'has_variations'     => 'boolean',
     ];
 
-    public function setPriceSlabsAttribute($value)
-    {
-        $this->attributes['price_slabs'] = is_string($value) ? json_decode($value, true) : $value;
-    }
-
     /*
     |--------------------------------------------------------------------------
     | Relationships
@@ -186,6 +181,21 @@ class Product extends Model
                     'total_count'   => $product->total_count,
                     'available_stock' => $product->getAvailableStock(),
                     'image_src'     => $product->image_src ?? [],
+                    'has_dynamic_pricing' => $product->has_dynamic_pricing,
+                    'price_slabs'   => $product->price_slabs,
+                    'has_variations' => $product->has_variations,
+                    'variations'    => $product->variations->map(function ($v) {
+                        return [
+                            'id' => $v->id,
+                            'name' => $v->name,
+                            'selling_price' => $v->selling_price,
+                            'has_dynamic_pricing' => $v->has_dynamic_pricing,
+                            'price_slabs' => $v->price_slabs,
+                            'image_src' => $v->image_src,
+                            'total_count' => $v->getTotalCount(),
+                            'available_stock' => $v->getAvailableStock(),
+                        ];
+                    }),
 
                     'product_batches' => $product->productBatches->map(function ($batch) {
                         return [
@@ -193,6 +203,8 @@ class Product extends Model
                             'count'      => $batch->count,
                             'cost_price' => $batch->cost_price ?? null,
                             'created_at' => $batch->created_at,
+                            'variation_id' => $batch->variation_id,
+                            'variation' => $batch->variation ? ['id' => $batch->variation->id, 'name' => $batch->variation->name] : null,
                         ];
                     })->values(),
                 ];

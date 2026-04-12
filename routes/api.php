@@ -90,6 +90,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/product/{id}/total-count', [ProductController::class, 'getTotalCount']);
     Route::post('/product/{id}/update-total-count', [ProductController::class, 'updateTotalCount']);
 
+    // Admin Variations
+    Route::patch('/product/{id}/has-variations', [ProductController::class, 'updateHasVariations']);
+    Route::post('/product/{id}/variation', [ProductController::class, 'createVariation']);
+    Route::patch('/variation/{id}', [ProductController::class, 'updateVariation']);
+    Route::delete('/variation/{id}', [ProductController::class, 'deleteVariation']);
+
     // Admin Inventory (Product Batch)
     Route::post('/inventory/add', [ProductBatchController::class, 'addInventory']);
     Route::post('/inventory/remove', [ProductBatchController::class, 'removeInventory']);

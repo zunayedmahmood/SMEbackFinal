@@ -26,11 +26,6 @@ class Variation extends Model
         'image_src' => 'array',
     ];
 
-    public function setPriceSlabsAttribute($value)
-    {
-        $this->attributes['price_slabs'] = is_string($value) ? json_decode($value, true) : $value;
-    }
-
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
