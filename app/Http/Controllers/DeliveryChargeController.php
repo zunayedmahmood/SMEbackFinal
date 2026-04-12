@@ -12,21 +12,34 @@ class DeliveryChargeController extends Controller
     /**
      * Calculate and display delivery charge.
      */
-    public function getDeliveryCharge(Request $request): JsonResponse
+    /**
+     * Get the current global delivery charge.
+     */
+    public function getDeliveryCharge(): JsonResponse
     {
-        $validated = $request->validate([
-            'division' => 'required|string',
-            'district' => 'required|string',
-        ]);
-
-        $charge = DeliveryCharge::calculate(
-            $validated['division'],
-            $validated['district']
-        );
+        $charge = DeliveryCharge::calculate();
 
         return response()->json([
             'success'         => true,
             'delivery_charge' => $charge
+        ]);
+    }
+
+    /**
+     * Update the global delivery charge.
+     */
+    public function updateDeliveryCharge(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'delivery_charge' => 'required|numeric|min:0'
+        ]);
+
+        \App\Models\SiteSetting::setValue('delivery_charge', $validated['delivery_charge']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Delivery charge updated successfully.',
+            'delivery_charge' => $validated['delivery_charge']
         ]);
     }
 }

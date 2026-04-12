@@ -27,9 +27,10 @@ class OrderListController extends Controller
             'payment_method' => ['required', 'in:COD,Online'],
             'payment_status' => ['required', 'in:Unpaid,Paid,Failed'],
 
-            'address.details' => ['required', 'string'],
-            'address.selection.division' => ['required', 'string'],
-            'address.selection.district' => ['required', 'string'],
+            'address.line1' => ['required', 'string'],
+            'address.suburb' => ['required', 'string'],
+            'address.state' => ['required', 'string'],
+            'address.postcode' => ['required', 'string', 'digits:4'],
 
             'stripe_checkout_session_id' => ['nullable', 'string', 'required_if:payment_method,Online'],
             'stripe_payment_intent_id'   => ['nullable', 'string'],

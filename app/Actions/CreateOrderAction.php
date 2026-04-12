@@ -71,10 +71,8 @@ class CreateOrderAction
                 ];
             }
 
-            // Calculate delivery charge
-            $division = $address['selection']['division'] ?? null;
-            $district = $address['selection']['district'] ?? null;
-            $deliveryCharge = DeliveryCharge::calculate($division, $district);
+            // Calculate delivery charge (Global Flat Rate)
+            $deliveryCharge = DeliveryCharge::calculate();
 
             $totalPrice = $subtotal + $deliveryCharge;
 

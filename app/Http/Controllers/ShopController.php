@@ -52,9 +52,10 @@ class ShopController extends Controller
                 Rule::in(['COD', 'Online'])
             ],
 
-            'orderData.address.details' => ['required', 'string'],
-            'orderData.address.selection.division' => ['required', 'string'],
-            'orderData.address.selection.district' => ['required', 'string'],
+            'orderData.address.line1' => ['required', 'string', 'max:255'],
+            'orderData.address.suburb' => ['required', 'string', 'max:100'],
+            'orderData.address.state' => ['required', 'string', 'in:NSW,VIC,QLD,WA,SA,TAS,ACT,NT'],
+            'orderData.address.postcode' => ['required', 'string', 'digits:4'],
         ]);
 
         $formattedProducts = [];
