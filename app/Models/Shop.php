@@ -68,14 +68,18 @@ class Shop extends Model
                 continue;
             }
 
-            if ($product->has_variations && $variationId) {
+            if ($product->has_variations) {
+                if (!$variationId) {
+                    $someProductRemoved = true;
+                    continue;
+                }
                 $variation = $product->variations->find($variationId);
                 if (!$variation) {
                     $someProductRemoved = true;
                     continue;
                 }
                 $availableStock = $variation->getAvailableStock();
-                $price = $variation->getPriceForQuantity($qty);
+                $price = $variation->selling_price !== null ? (float)$variation->selling_price : 0;
                 $productName = $product->name . ' (' . $variation->name . ')';
                 $imageSrc = !empty($variation->image_src) ? $variation->image_src : $product->image_src;
             } else {

@@ -12,8 +12,6 @@ class Variation extends Model
         'product_id',
         'name',
         'selling_price',
-        'has_dynamic_pricing',
-        'price_slabs',
         'image_src',
     ];
 
@@ -21,8 +19,6 @@ class Variation extends Model
 
     protected $casts = [
         'selling_price' => 'decimal:2',
-        'has_dynamic_pricing' => 'boolean',
-        'price_slabs' => 'array',
         'image_src' => 'array',
     ];
 
@@ -63,16 +59,6 @@ class Variation extends Model
 
     public function getPriceForQuantity(int $qty): ?float
     {
-        if ($this->has_dynamic_pricing && !empty($this->price_slabs)) {
-            foreach ($this->price_slabs as $slab) {
-                $min = $slab['min_qty'] ?? 0;
-                $max = $slab['max_qty'] ?? PHP_INT_MAX;
-
-                if ($qty >= $min && $qty <= $max) {
-                    return (float) $slab['price'];
-                }
-            }
-        }
         return $this->selling_price ? (float) $this->selling_price : null;
     }
 
