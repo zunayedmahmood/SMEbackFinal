@@ -72,6 +72,10 @@ class ProductController extends Controller
             $request->merge(['price_slabs' => json_decode($request->price_slabs, true)]);
         }
 
+        if ($request->has('variations') && is_string($request->variations)) {
+            $request->merge(['variations' => json_decode($request->variations, true)]);
+        }
+
         $validated = $request->validate([
             'name'                => 'required|string|max:255',
             'selling_price'       => 'nullable|numeric|min:0',
@@ -83,6 +87,7 @@ class ProductController extends Controller
             'has_dynamic_pricing' => 'nullable|boolean',
             'price_slabs'         => 'nullable|array',
             'has_variations'      => 'nullable|boolean',
+            'variations'          => 'nullable|array',
         ]);
 
         $product = Product::createProduct(
@@ -93,7 +98,9 @@ class ProductController extends Controller
             $request->categories_id,
             $request->boolean('has_dynamic_pricing'),
             $request->price_slabs,
-            $request->boolean('has_variations')
+            $request->boolean('has_variations'),
+            $request->variations,
+            $request->allFiles() // Passes all files including variation_images_{idx}
         );
 
         return response()->json([

@@ -90,6 +90,8 @@ class Product extends Model
         bool   $hasDynamicPricing = false,
         ?array $priceSlabs = null,
         bool   $hasVariations = false,
+        ?array $variations = null,
+        array $requestData = [] // For variation files
     ): self {
         // ── Resolve unique name ──────────────────────────────────────
         $finalName = $name;
@@ -123,6 +125,29 @@ class Product extends Model
         if ($categories_id !== null) {
             foreach ($categories_id as $category_id) {
                 $product->categories()->attach($category_id);
+            }
+        }
+
+        // ── Create Variations if provided ───────────────────────────
+        if ($hasVariations && !empty($variations)) {
+            foreach ($variations as $idx => $vData) {
+                $varStoredPaths = [];
+                $fileKey = "variation_images_{$idx}";
+                
+                // Check if any files were uploaded for this specific variation
+                if (isset($requestData[$fileKey]) && is_array($requestData[$fileKey])) {
+                    foreach ($requestData[$fileKey] as $file) {
+                        $varStoredPaths[] = $imageKit->upload($file, 'products');
+                    }
+                }
+
+                $product->variations()->create([
+                    'name'                => $vData['name'] ?? 'Default Variation',
+                    'selling_price'       => isset($vData['selling_price']) ? round((float)$vData['selling_price'], 2) : $product->selling_price,
+                    'image_src'           => empty($varStoredPaths) ? null : $varStoredPaths,
+                    'has_dynamic_pricing' => false,
+                    'price_slabs'         => null,
+                ]);
             }
         }
 
