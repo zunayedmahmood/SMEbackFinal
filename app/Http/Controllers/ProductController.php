@@ -416,9 +416,9 @@ class ProductController extends Controller
         $variation = $product->variations()->create([
             'name'                => $validated['name'],
             'selling_price'       => $request->selling_price !== null ? round((float)$request->selling_price, 2) : null,
-            'has_dynamic_pricing' => $request->boolean('has_dynamic_pricing'),
-            'price_slabs'         => $validated['price_slabs'] ?? null,
             'image_src'           => empty($storedPaths) ? null : $storedPaths,
+            'has_dynamic_pricing' => false,
+            'price_slabs'         => null,
         ]);
 
         return response()->json([
@@ -447,12 +447,6 @@ class ProductController extends Controller
         }
         if ($request->has('selling_price')) {
             $variation->selling_price = $request->selling_price !== null ? round((float)$request->selling_price, 2) : null;
-        }
-        if ($request->has('has_dynamic_pricing')) {
-            $variation->has_dynamic_pricing = $request->boolean('has_dynamic_pricing');
-        }
-        if ($request->has('price_slabs')) {
-            $variation->price_slabs = $validated['price_slabs'];
         }
         $variation->save();
 

@@ -19,14 +19,16 @@ class ProductBatchController extends Controller
     public function addInventory(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'product_id' => 'required|integer|exists:products,id',
-            'cost_price' => 'required|numeric|min:0',
-            'quantity'   => 'required|integer|min:1',
+            'product_id'   => 'required|integer|exists:products,id',
+            'variation_id' => 'nullable|integer|exists:variations,id',
+            'cost_price'   => 'required|numeric|min:0',
+            'quantity'     => 'required|integer|min:1',
         ]);
 
         $product = Product::findOrFail($validated['product_id']);
+        $variationId = $validated['variation_id'] ?? null;
 
-        ProductBatch::addInventory($product, (float)$validated['cost_price'], (int)$validated['quantity']);
+        ProductBatch::addInventory($product, (float)$validated['cost_price'], (int)$validated['quantity'], $variationId);
 
         return response()->json([
             'success' => true,
