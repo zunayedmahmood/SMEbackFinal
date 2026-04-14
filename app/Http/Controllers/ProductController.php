@@ -485,4 +485,46 @@ class ProductController extends Controller
             'message' => 'Variation deleted successfully.'
         ], 200);
     }
+
+    /**
+     * Add images to a specific variation.
+     */
+    public function addVariationImage(Request $request, int $variationId): JsonResponse
+    {
+        $variation = \App\Models\Variation::findOrFail($variationId);
+
+        $validated = $request->validate([
+            'images'   => 'required|array',
+            'images.*' => 'image|mimes:jpeg,png,jpg,webp|max:5120',
+        ]);
+
+        $variation->addNewImage($request->file('images'));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Variation images added successfully.',
+            'data'    => $variation
+        ], 200);
+    }
+
+    /**
+     * Delete images from a specific variation.
+     */
+    public function deleteVariationImage(Request $request, int $variationId): JsonResponse
+    {
+        $variation = \App\Models\Variation::findOrFail($variationId);
+
+        $validated = $request->validate([
+            'paths'   => 'required|array',
+            'paths.*' => 'string',
+        ]);
+
+        $variation->deleteImage($validated['paths']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Variation images deleted successfully.',
+            'data'    => $variation
+        ], 200);
+    }
 }

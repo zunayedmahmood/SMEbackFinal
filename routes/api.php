@@ -95,6 +95,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/product/{id}/variation', [ProductController::class, 'createVariation']);
     Route::patch('/variation/{id}', [ProductController::class, 'updateVariation']);
     Route::delete('/variation/{id}', [ProductController::class, 'deleteVariation']);
+    Route::post('/variation/{id}/images', [ProductController::class, 'addVariationImage']);
+    Route::delete('/variation/{id}/images', [ProductController::class, 'deleteVariationImage']);
 
     // Admin Inventory (Product Batch)
     Route::post('/inventory/add', [ProductBatchController::class, 'addInventory']);

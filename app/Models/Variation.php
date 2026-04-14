@@ -104,4 +104,36 @@ class Variation extends Model
             'totalCostPrice' => round($totalCostPrice, 2),
         ];
     }
+    /**
+     * Store new images via ImageKit.
+     */
+    public function addNewImage(array $files): self
+    {
+        $storedPaths = $this->image_src ?? [];
+        $imageKit    = new \App\Services\ImageKitService();
+
+        foreach ($files as $file) {
+            $storedPaths[] = $imageKit->upload($file, 'products');
+        }
+
+        $this->update(['image_src' => $storedPaths]);
+        return $this;
+    }
+
+    /**
+     * Delete existing images from ImageKit and DB.
+     */
+    public function deleteImage(array $paths): self
+    {
+        $currentPaths = $this->image_src ?? [];
+        $imageKit     = new \App\Services\ImageKitService();
+
+        foreach ($paths as $path) {
+            $imageKit->delete($path);
+            $currentPaths = array_values(array_filter($currentPaths, fn($p) => $p !== $path));
+        }
+
+        $this->update(['image_src' => $currentPaths]);
+        return $this;
+    }
 }
