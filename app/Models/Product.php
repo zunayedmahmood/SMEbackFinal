@@ -179,17 +179,28 @@ class Product extends Model
     /**
      * Get paginated products (with batches & categories).
      */
-    public static function getAllProductsPaginated(int $perPage = 7, int $page = 1, ?string $search = null): array
+    public static function getAllProductsPaginated(int $perPage = 7, int $page = 1, ?string $search = null, ?int $categoryId = null): array
     {
         $query = self::with(['categories', 'productBatches', 'variations'])
             ->orderBy('created_at', 'desc');
 
         if ($search) {
-            $query->where('name', 'like', '%' . $search . '%')
-                ->orWhere('description', 'like', '%' . $search . '%')
-                ->orWhereHas('categories', function ($q) use ($search) {
-                    $q->where('name', 'like', '%' . $search . '%');
-                });
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                    ->orWhere('description', 'like', '%' . $search . '%')
+                    ->orWhereHas('categories', function ($cq) use ($search) {
+                        $cq->where('name', 'like', '%' . $search . '%');
+                    })
+                    ->orWhereHas('variations', function ($vq) use ($search) {
+                        $vq->where('name', 'like', '%' . $search . '%');
+                    });
+            });
+        }
+
+        if ($categoryId) {
+            $query->whereHas('categories', function ($q) use ($categoryId) {
+                $q->where('categories.id', $categoryId);
+            });
         }
 
         $paginator = $query->paginate($perPage, ['*'], 'page', $page);

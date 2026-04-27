@@ -32,11 +32,12 @@ class ProductController extends Controller
      */
     public function getAllProductsPaginated(Request $request): JsonResponse
     {
-        $perPage = $request->input('per_page', 7);
-        $page    = $request->input('page', 1);
-        $search  = $request->input('search');
+        $perPage    = $request->input('per_page', 7);
+        $page       = $request->input('page', 1);
+        $search     = $request->input('search');
+        $categoryId = $request->input('category_id');
 
-        $result = Product::getAllProductsPaginated((int)$perPage, (int)$page, $search);
+        $result = Product::getAllProductsPaginated((int)$perPage, (int)$page, $search, $categoryId ? (int)$categoryId : null);
 
         return response()->json([
             'success' => true,
