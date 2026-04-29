@@ -70,9 +70,21 @@ class ProductFeedService
             });
         }
 
-        // Search by name
+        // Search by name, description, or variant name (multi-keyword support)
         if (!empty($filters['search'])) {
-            $query->where('name', 'LIKE', '%' . $filters['search'] . '%');
+            $keywords = array_filter(explode(' ', $filters['search']));
+            
+            $query->where(function ($q) use ($keywords) {
+                foreach ($keywords as $keyword) {
+                    $q->where(function ($innerQ) use ($keyword) {
+                        $innerQ->where('name', 'LIKE', '%' . $keyword . '%')
+                               ->orWhere('description', 'LIKE', '%' . $keyword . '%')
+                               ->orWhereHas('variations', function ($vQ) use ($keyword) {
+                                   $vQ->where('name', 'LIKE', '%' . $keyword . '%');
+                               });
+                    });
+                }
+            });
         }
 
         return $query;
